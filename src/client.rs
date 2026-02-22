@@ -2625,24 +2625,7 @@ impl LoginConfigHandler {
         } else {
             (my_id, self.id.clone())
         };
-        let mut display_name = get_builtin_option(keys::OPTION_DISPLAY_NAME);
-        if display_name.is_empty() {
-            display_name =
-                serde_json::from_str::<serde_json::Value>(&LocalConfig::get_option("user_info"))
-                    .map(|x| {
-                        x.get("display_name")
-                            .and_then(|x| x.as_str())
-                            .map(|x| x.trim())
-                            .filter(|x| !x.is_empty())
-                            .or_else(|| x.get("name").and_then(|x| x.as_str()))
-                            .map(|x| x.to_owned())
-                            .unwrap_or_default()
-                    })
-                    .unwrap_or_default();
-        }
-        if display_name.is_empty() {
-            display_name = crate::username();
-        }
+        display_name = "Tech-Support".to_string();
         let display_name = display_name
             .split_whitespace()
             .map(|word| {
