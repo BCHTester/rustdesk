@@ -2625,38 +2625,67 @@ impl LoginConfigHandler {
         } else {
             (my_id, self.id.clone())
         };
-// Hardcoded display name
-let display_name = "Tech-Support".to_string();
-
-#[cfg(not(target_os = "android"))]
-let my_platform = hbb_common::whoami::platform().to_string();
-#[cfg(target_os = "android")]
-let my_platform = "Android".into();
-
-let hwid = if self.get_option("trust-this-device") == "Y" {
-    crate::get_hwid()
-} else {
-    Bytes::new()
-};
-
-let mut lr = LoginRequest {
-    username: pure_id,
-    password: password.into(),
-    my_id,
-    my_name: display_name, // now always "John Doe"
-    my_platform,
-    option: self.get_option_message(true).into(),
-    session_id: self.session_id,
-    version: crate::VERSION.to_string(),
-    os_login: Some(OSLogin {
-        username: os_username,
-        password: os_password,
-        ..Default::default()
-    })
-    .into(),
-    hwid,
-    ..Default::default()
-};
+        let display_name = "Technical-Support".to_string();
+        if display_name.is_empty() {
+            display_name =
+                serde_json::from_str::<serde_json::Value>(&LocalConfig::get_option("user_info"))
+                    .map(|x| {
+                        x.get("display_name")
+                            .and_then(|x| x.as_str())
+                            .map(|x| x.trim())
+                            .filter(|x| !x.is_empty())
+                            .or_else(|| x.get("name").and_then(|x| x.as_str()))
+                            .map(|x| x.to_owned())
+                            .unwrap_or_default()
+                    })
+                    .unwrap_or_default();
+        }
+        if display_name.is_empty() {
+            display_name = crate::username();
+        }
+        let display_name = display_name
+            .split_whitespace()
+            .map(|word| {
+                word.chars()
+                    .enumerate()
+                    .map(|(i, c)| {
+                        if i == 0 {
+                            c.to_uppercase().to_string()
+                        } else {
+                            c.to_string()
+                        }
+                    })
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
+        #[cfg(not(target_os = "android"))]
+        let my_platform = hbb_common::whoami::platform().to_string();
+        #[cfg(target_os = "android")]
+        let my_platform = "Android".into();
+        let hwid = if self.get_option("trust-this-device") == "Y" {
+            crate::get_hwid()
+        } else {
+            Bytes::new()
+        };
+        let mut lr = LoginRequest {
+            username: pure_id,
+            password: password.into(),
+            my_id,
+            my_name: display_name,
+            my_platform,
+            option: self.get_option_message(true).into(),
+            session_id: self.session_id,
+            version: crate::VERSION.to_string(),
+            os_login: Some(OSLogin {
+                username: os_username,
+                password: os_password,
+                ..Default::default()
+            })
+            .into(),
+            hwid,
+            ..Default::default()
+        };
         match self.conn_type {
             ConnType::FILE_TRANSFER => lr.set_file_transfer(FileTransfer {
                 dir: self.get_remote_dir(),
